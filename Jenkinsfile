@@ -4,22 +4,16 @@ pipeline {
         maven 'local maven'
     }
     stages{
-        stage ('Init'){
+        stage ('build'){
             steps{
-                echo "Testing......"
+                sh 'mvn clean package'
             }
-        }
-        stage ('Build'){
-            steps{
-                echo "Building......"
-            }
-        }
-        stage ('Deploy'){
-            steps{
-                echo "Deploy......"
+            post {
+                success {
+                    echo '开始i存档...'
+                    archiveArtifacts artifacts: '**/target/*.war'
+                }
             }
         }
     }
-
-
 }
