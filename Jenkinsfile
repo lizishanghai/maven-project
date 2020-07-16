@@ -1,43 +1,46 @@
 pipeline {
     agent any
+
     tools{
         maven 'local maven'
     }
-    stages{
+
+    parameters{
+        string(name: 'tomcat_dev', defaultValue: '52.15.183.253', description: 'Staging Server')
+        string(name: 'tomcat_prod', defaultValue: '13.58.179.83', description: 'Production Server')
+    }
+
+    triggers {
+         pollSCM('* * * * *')
+     }
+
+     stages{
         stage('Build'){
-            steps{
-                bat 'mvn clean package'
+            steps {
+                sh 'mvn clean package'
             }
             post {
                 success {
-                    echo '开始i存档...'
+                    echo '开始存档...'
                     archiveArtifacts artifacts: '**/target/*.war'
                 }
             }
         }
-        stage('Deploy to staging'){
-            steps{
-                build job: 'deploy-to-staging'
-            }
-        }
 
-       stage('Deploy to Production'){
-            steps{
-                timeout(time:5, unit:'DAYS'){
-                    input message: '是否部署到生产环境?'
+     stage ('Deployments'){
+            parallel{
+                stage ('Deploy to Staging'){
+                    steps {
+                        sh "scp -i /Users/gaoyan/Documents/SunnyDemo/dev/tomcat-demo.pem.txt **/target/*.war ec2-user@${params.tomcat_dev}:/var/lib/tomcat8/webapps"
+                    }
                 }
-                build job: 'deploy-to-production'
-            }
-            post {
-                success {
-                    echo '代码成功快到生产环境'
-                }
-                failure {
-                    echo '部署失败'
+
+                stage ("Deploy to Production"){
+                    steps {
+                        sh "scp -i /Users/gaoyan/Documents/SunnyDemo/dev/tomcat-demo.pem.txt **/target/*.war ec2-user@${params.tomcat_prod}:/var/lib/tomcat8/webapps"
+                    }
                 }
             }
         }
-
-
     }
 }
